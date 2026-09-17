@@ -2,7 +2,7 @@
 
 الـ Backend الخاص بمنصة **CoachLink**، وهي منصة لربط المدربين الرياضيين باللاعبين وإدارة البرامج التدريبية والخطط الغذائية والاشتراكات ومتابعة تقدم اللاعبين، بالإضافة إلى الإشعارات والمحادثات الفورية.
 
-تم تطوير الـ Backend باستخدام **Python, Django, وDjango REST Framework**، مع تقسيم النظام إلى تطبيقات مستقلة حسب الوظيفة، مما يساعد على تنظيم الكود وتسهيل تطوير وصيانة المشروع.
+تم تطوير الـ Backend باستخدام **Python, Django, وDjango REST Framework**، مع استخدام **PostgreSQL** كقاعدة بيانات، وتقسيم النظام إلى تطبيقات مستقلة حسب الوظيفة، مما يساعد على تنظيم الكود وتسهيل تطوير وصيانة المشروع.
 
 ---
 
@@ -189,21 +189,21 @@ CoachLink-BackEnd/
 
 # 🛠️ التقنيات المستخدمة
 
-| التقنية               | الاستخدام                      |
-| --------------------- | ------------------------------ |
-| Python                | لغة البرمجة الأساسية           |
-| Django                | إطار عمل الـ Backend           |
-| Django REST Framework | بناء REST APIs                 |
-| Simple JWT            | المصادقة باستخدام JWT          |
-| Django Channels       | دعم الاتصال الفوري             |
-| WebSockets            | المحادثات الفورية              |
-| Celery                | تنفيذ المهام في الخلفية        |
-| Stripe                | معالجة المدفوعات               |
-| Google Authentication | تسجيل الدخول باستخدام Google   |
-| SQL                   | إدارة البيانات وقواعد البيانات |
-| Git                   | Version Control                |
-| GitHub                | استضافة وإدارة الكود           |
-| Swagger / OpenAPI     | توثيق واختبار الـ APIs         |
+| التقنية               | الاستخدام                    |
+| --------------------- | ---------------------------- |
+| Python                | لغة البرمجة الأساسية         |
+| Django                | إطار عمل الـ Backend         |
+| Django REST Framework | بناء REST APIs               |
+| PostgreSQL            | قاعدة البيانات               |
+| Simple JWT            | المصادقة باستخدام JWT        |
+| Django Channels       | دعم الاتصال الفوري           |
+| WebSockets            | المحادثات الفورية            |
+| Celery                | تنفيذ المهام في الخلفية      |
+| Stripe                | معالجة المدفوعات             |
+| Google Authentication | تسجيل الدخول باستخدام Google |
+| Git                   | Version Control              |
+| GitHub                | استضافة وإدارة الكود         |
+| Swagger / OpenAPI     | توثيق واختبار الـ APIs       |
 
 ---
 
@@ -341,13 +341,18 @@ pip install -r requirements.txt
 SECRET_KEY=your-secret-key
 DEBUG=True
 
+DATABASE_NAME=your-database-name
+DATABASE_USER=your-database-user
+DATABASE_PASSWORD=your-database-password
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+
 STRIPE_SECRET_KEY=your-stripe-secret-key
 STRIPE_WEBHOOK_SECRET=your-stripe-webhook-secret
 
 GOOGLE_CLIENT_ID=your-google-client-id
 ```
 
-> ⚠️ لا تقم برفع ملف `.env` أو أي Secret أو API Key إلى GitHub.
 
 ## 5. تشغيل Database Migrations
 
@@ -369,6 +374,33 @@ http://127.0.0.1:8000/
 
 ---
 
+# 🗄️ قاعدة البيانات
+
+يستخدم المشروع **PostgreSQL** لإدارة وتخزين بيانات المنصة.
+
+تتضمن قاعدة البيانات كيانات مرتبطة بمختلف أجزاء النظام، مثل:
+
+```text
+Users
+Coach Profiles
+Player Profiles
+Programs
+Weeks
+Days
+Exercises
+Nutrition Plans
+Subscriptions
+Payments
+Workout Logs
+Nutrition Logs
+Notifications
+Chats
+```
+
+وتتم إدارة البيانات من خلال **Django ORM** مع استخدام العلاقات بين الـ Models وتنفيذ عمليات الاستعلام والتحديث من خلال Django.
+
+---
+
 # 🎯 هدف المشروع
 
 يهدف CoachLink إلى توفير Backend متكامل لمنصة تدريب رياضي تجمع بين المدربين واللاعبين وتوفر الأدوات اللازمة لإدارة عملية التدريب والمتابعة.
@@ -384,6 +416,7 @@ http://127.0.0.1:8000/
 * التكامل مع External APIs.
 * Real-Time Communication.
 * Background Tasks.
+* استخدام PostgreSQL لتخزين البيانات.
 * تنظيم المشروع إلى Django Applications مستقلة.
 
 ---
@@ -403,7 +436,7 @@ Django
 Django REST Framework
 REST APIs
 Django ORM
-SQL
+PostgreSQL
 JWT Authentication
 WebSockets
 Git & GitHub
@@ -416,4 +449,4 @@ Backend Architecture
 
 **CoachLink — Fitness Coaching Platform**
 
-هذا المشروع تم تطويره كتطبيق عملي لتطبيق مفاهيم Backend Development باستخدام Django وDjango REST Framework، مع دمج خدمات خارجية وأنظمة Authentication وPayments وReal-Time Communication.
+مشروع Backend تم تطويره باستخدام Django وDjango REST Framework لتطبيق مفاهيم Backend Development وبناء نظام متكامل يتضمن Authentication وAuthorization وإدارة البيانات والتكامل مع الخدمات الخارجية والمدفوعات والاتصال الفوري.
