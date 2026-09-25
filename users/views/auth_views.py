@@ -80,10 +80,10 @@ class OtpVerifyView(APIView):
             200:inline_serializer(
             name="AccountVerificationResponse",
             fields={
-                "message":"Account verified successfully",
+                "message":serializers.CharField(),
                 "access":serializers.CharField(),
                 "refresh":serializers.CharField(),
-                "user":UserSerializer
+                "user":UserSerializer()
                 }
             ),
             400:OpenApiResponse(description="Invalid OTP")
@@ -151,10 +151,10 @@ class LocalLoginView(APIView):
             200:inline_serializer(
             name="LocalLoginResponse",
             fields={
-                "message":"Login successful",
+                "message":serializers.CharField(),
                 "access":serializers.CharField(),
                 "refresh":serializers.CharField(),
-                "user":UserSerializer
+                "user":UserSerializer()
                 }
             ),
             400: OpenApiResponse(description="Invalid credentials or unverified email")
@@ -180,6 +180,7 @@ class LocalLoginView(APIView):
                                 }, status=status.HTTP_200_OK)           
             except User.DoesNotExist:
                 return Response({"error": "User with this email does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GoogleAuthView(APIView):
     @extend_schema(
@@ -190,10 +191,10 @@ class GoogleAuthView(APIView):
             200:inline_serializer(
             name="GoogleLoginOrRegisterResponse",
             fields={
-                "message":"Login successful",
+                "message":serializers.CharField(),
                 "access":serializers.CharField(),
                 "refresh":serializers.CharField(),
-                "user":UserSerializer
+                "user":UserSerializer()
                 }
             ),
             400: OpenApiResponse(description="Invalid Google token or unverified email")

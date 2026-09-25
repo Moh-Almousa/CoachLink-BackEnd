@@ -47,12 +47,13 @@ class ExerciseSearchView(APIView):
             200:inline_serializer(
                 name="ExerciseSerachRespons",
                 fields={
-                    'id': serializers.ImageField(),
+                    'id': serializers.IntegerField(),
                     'name': serializers.CharField(),
                     'target': serializers.CharField(),
                     'body_part': serializers.CharField(),
                     'equipment': serializers.CharField(),
-                }
+                },
+                many=True,
             ),
             502:OpenApiResponse(description="Could not reach the exercise library right now."),
 

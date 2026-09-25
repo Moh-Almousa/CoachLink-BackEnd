@@ -91,7 +91,7 @@ class LogWorkoutView(APIView):
         ),
 
         responses={
-            200:WorkoutLogSerializer,
+            200:WorkoutLogSerializer(many=True),
             400:OpenApiResponse(description="exercise is required"),
             404:OpenApiResponse(description="exercise is not found"),
             403:OpenApiResponse(description="This exercise is not for you")
@@ -138,7 +138,7 @@ class WorkoutProfileView(APIView):
             200:inline_serializer(
                 name="LogWorkOutResponse",
                 fields={
-                    "program":ProgramPlanSerializer(many=True),
+                    "program":ProgramPlanSerializer(allow_null=True),
                     "logs":WorkoutLogSerializer(many=True),
                     "day_status":serializers.ListField(allow_null=True)
                 }

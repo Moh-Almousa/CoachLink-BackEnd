@@ -117,12 +117,12 @@ class SendMessageView(APIView):
     @extend_schema(
         summary="send Messages",
         description="ارسال رسالة ",
-        request=SendMessageInputSerializer,
+        request={'multipart/form-data': SendMessageInputSerializer},
         responses={
             400:OpenApiResponse(description="Bad Request"),
             404:OpenApiResponse(description="Receiver not found"),
             403:OpenApiResponse(description="Subscription is not active"),
-            201:ChatMessageSerializer(many=True)
+            201:ChatMessageSerializer
         }
     )
 

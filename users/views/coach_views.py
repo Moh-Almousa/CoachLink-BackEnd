@@ -40,7 +40,7 @@ class CoachCertificateView(APIView):
     @extend_schema(
         summary="Upload Coach Certificate",
         description= "رفع شهادة الكوتش ، خاصة للكوتشات",
-        request=CoachCertificateSerializer,
+        request={'multipart/form-data': CoachCertificateSerializer},
         responses={200:OpenApiResponse(description="The certificate has been successfully uploaded.It will be reviewed by Admin.")}
     )
     def post(self, request):
@@ -73,8 +73,8 @@ class CoachTransformationView(APIView):
     @extend_schema(
         summary="Upload Transformation Image",
         description="رفع صورة تحول لاعب في البوم الكوتش ، خاصة للكوتشات الموثوقين",
-        request=CoachTransformationSerializer,
-        responses={201:CoachTransformationSerializer(many=True)}
+        request={'multipart/form-data': CoachTransformationSerializer},
+        responses={201:CoachTransformationSerializer}
     )
     def post(self, request):
         serializer = CoachTransformationSerializer(data=request.data, context={'request': request})
@@ -86,8 +86,8 @@ class CoachTransformationView(APIView):
     @extend_schema(
         summary="Update one Transformation Image",
         description="تعديل صورة واحدة او المدة او صوتين من الالبوم ، خاصة للكوتشات الموثوقين",
-        request=CoachTransformationSerializer,
-        responses={200:CoachTransformationSerializer(many=True)}
+        request={'multipart/form-data': CoachTransformationSerializer},
+        responses={200:CoachTransformationSerializer}
     )   
     def patch(self, request,pk):
         coach = request.user.coach_profile
@@ -103,8 +103,8 @@ class CoachTransformationView(APIView):
     @extend_schema(
         summary="Update all Transformation Image",
         description="تعديل الالبوم كامل ، خاصة للكوتشات الموثوقين",
-        request=CoachTransformationSerializer,
-        responses={200:CoachTransformationSerializer(many=True)}
+        request={'multipart/form-data': CoachTransformationSerializer},
+        responses={200:CoachTransformationSerializer}
     ) 
     def put(self, request, pk):
         coach = request.user.coach_profile
@@ -145,7 +145,8 @@ class CoachProfileView(APIView):
     @extend_schema(
             summary="Update coach professional profile",
             description="Update the profile information of the authenticated and verified coach.",
-            request = CoachProfessionalInformationSerializer,
+            request = {'multipart/form-data': CoachProfessionalInformationSerializer,
+                       'application/json': CoachProfessionalInformationSerializer},
             responses= {200:OpenApiResponse(description="Professional profile has been successfully updated.")}
     )
     def patch(self, request):
@@ -383,8 +384,8 @@ class CoachMyPlayers(APIView):
                 name="CoachPlayersResponse",
                 fields={
                     "coach_id":serializers.IntegerField(),
-                    "statistics":CoachPlayerCardSerializer(many=True),
-                    "players_cards":CoachPlayersStatsSerializer(many=True)
+                    "statistics":CoachPlayersStatsSerializer(),
+                    "players_cards":CoachPlayerCardSerializer(many=True)
                 }
             )
         }

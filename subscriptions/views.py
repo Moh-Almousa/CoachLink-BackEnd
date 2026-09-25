@@ -89,8 +89,17 @@ class SubscriptionPackageView(APIView):
         summary="Delete a subscription package for coach",
         description="حذف باقة اشتراك موجودة عند الكوتش ، خاصة للكوتشات الموثوقين",
         responses={
-            200:OpenApiResponse(description="Package deleted successfully., deactivated: False"),\
-            200:OpenApiResponse(description="This package has existing payments or subscriptions, so it was deactivated instead of deleted., deactivated: True"),
+            200:OpenApiResponse(
+                response=inline_serializer(
+                    name="DeletePackageResponse",
+                    fields={
+                        "message":serializers.CharField(),
+                        "deactivated":serializers.BooleanField(),
+                    }
+                ),
+                description="deactivated=false: package deleted. "
+                            "deactivated=true: package has payments/subscriptions, so it was deactivated instead."
+            ),
             404:OpenApiResponse(description="Package not found"),
         }
     )
@@ -122,7 +131,7 @@ class CreatePaymentAPIView(APIView):
         description="انشاء سجل دفع لباقة اشتراك ، خاصة للاعبين",
         request=CreatePaymentSerializer,
         responses={
-            200:inline_serializer(
+            201:inline_serializer(
                 name="PaymentResponse",
                 fields={
                     "checkout_url":serializers.URLField(),

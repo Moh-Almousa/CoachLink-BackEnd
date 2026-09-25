@@ -45,9 +45,16 @@ class LogMealCompletionView(APIView):
     @extend_schema(
         summary="create log nutirtion meal in day",
         description="انشاء سجل تتبع للوجبات",
-        request=NutritionLogSerializer,
+        request=inline_serializer(
+            name="LogMealRequest",
+            fields={
+                "meal_id":serializers.IntegerField(),
+            }
+        ),
         responses={
             200:NutritionLogSerializer,
+            400:OpenApiResponse(description="meal_id not found"),
+            404:OpenApiResponse(description="NutritionPlanMeal not found"),
             403:OpenApiResponse(response=inline_serializer(
                 name="ErrorRespons",
                 fields={
@@ -115,7 +122,7 @@ class NutritionProfileView (APIView):
                 name="TapNutirtionProfaile",
                 fields={
                     "logs":NutritionLogSerializer(many=True),
-                    "plan":NutritionPlanSerializer(many=True),
+                    "plan":NutritionPlanSerializer(allow_null=True),
                 }
             )
         }

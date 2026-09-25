@@ -72,10 +72,14 @@ class FoodSearchView(APIView):
             200:inline_serializer(
                 name="FoodSerachResponse",
                 fields={
-                'id': serializers.IntegerField(),
+                'id': serializers.CharField(),
                 'name': serializers.CharField(),
-                'per_100g': serializers.IntegerField(),
-                }
+                'per_100g': inline_serializer(
+                    name="FoodPer100g",
+                    fields={key: serializers.FloatField(allow_null=True) for key in WANTED_NUTRIENTS.values()},
+                ),
+                },
+                many=True,
             ),
         }
     )
@@ -116,7 +120,7 @@ class CoachCreateNutritionPlanView(APIView):
         request=CreateNutritionPlanSerializer,
         responses={
             400:OpenApiResponse(description="This player does not have an active subscription with you."),
-            200:NutritionPlanSerializer(many=True),
+            201:NutritionPlanSerializer,
         }
     )
 
@@ -307,7 +311,7 @@ class CoachEidteNutritionPlanView(APIView):
         responses={
             400:OpenApiResponse(description="This player does not have an active subscription with you "),
             404:OpenApiResponse(description="Player does not have an active plan."),
-            200:NutritionPlanSerializer(many=True)
+            200:NutritionPlanSerializer
         }
     )
 

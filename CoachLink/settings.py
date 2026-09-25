@@ -187,6 +187,12 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API documentation for CoachLink",
     "VERSION": "1.0.0",
     # No SERVERS: Swagger uses the current host
+    # Separate request/response components so file fields show as binary (file picker in Swagger)
+    "COMPONENT_SPLIT_REQUEST": True,
+    # Keep the JWT token after refreshing the Swagger page
+    "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
+    # Views serving both list and detail URLs: show each method only on its matching URL
+    "PREPROCESSING_HOOKS": ["CoachLink.schema_hooks.match_methods_to_pk_urls"],
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

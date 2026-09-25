@@ -28,7 +28,7 @@ class CoachProfileSerializer(serializers.ModelSerializer):
         model = CoachProfile
         fields = ['id','full_name','email','birth_date','age','specialization','experience_years',
             'bio','image_profile_url','verification_status','instagram_url','facebook_url','youtube_url','whatsapp_url',]
-    def get_age(self, obj):
+    def get_age(self, obj) -> int | None:
         if obj.user.birth_date:
             today = timezone.now().date()
             age = today.year - obj.user.birth_date.year - (
@@ -59,7 +59,7 @@ class CoachCardSerializer(serializers.ModelSerializer):
         fields = ['id', 'full_name', 'specialization', 'experience_years',
                   'avr_rating', 'Reviews', 'totalplayer',
                   'image_profile_url', 'created_at']
-    def get_avr_rating(self, obj):
+    def get_avr_rating(self, obj) -> float:
         return round(obj.avr_rating, 1) if obj.avr_rating is not None else 0
 
 
@@ -103,7 +103,7 @@ class CoachDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'full_name', 'specialization', 'bio', 'avr_rating',
                   'Reviews', 'totalplayer', 'image_profile_url',
                   'transformations', 'packages', 'ratings']
-    def get_avr_rating(self, obj):
+    def get_avr_rating(self, obj) -> float:
         return round(obj.avr_rating, 1) if obj.avr_rating is not None else 0
     
     

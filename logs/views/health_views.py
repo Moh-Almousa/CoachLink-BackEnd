@@ -22,7 +22,7 @@ class LogWeightView(APIView):
         description="تسجيل وزن اللاعب ، خاصة للاعبين",
         request=DailyPhysicalHealthSerializer,
         responses={
-            201:DailyPhysicalHealthSerializer(many=True),
+            201:DailyPhysicalHealthSerializer,
             400:OpenApiResponse(description="Bad Request")
         }
     )
@@ -80,7 +80,20 @@ class LogBodyMeasurementsView(APIView):
     @extend_schema(
         summary="Create Log Body Measura",
         description="كتابات قياسات عضلات الجسم",
-        request=BodyMeasurementSerializer,
+        request=inline_serializer(
+            name="LogBodyMeasurementsRequest",
+            fields={
+                "measurements":serializers.ListField(
+                    child=inline_serializer(
+                        name="BodyMeasurementItemRequest",
+                        fields={
+                            "muscle_name":serializers.ChoiceField(choices=BodyMeasurement.Muscle.choices),
+                            "value_cm":serializers.DecimalField(max_digits=10,decimal_places=2),
+                        }
+                    )
+                )
+            }
+        ),
         responses={
             400:OpenApiResponse(description="measurements is required"),
             201:BodyMeasurementSerializer(many=True)
