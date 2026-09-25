@@ -21,7 +21,7 @@ from rest_framework.permissions import IsAuthenticated
 from users.models import CoachProfile,User
 from drf_spectacular.utils import extend_schema,OpenApiResponse ,inline_serializer
 from rest_framework import serializers
-
+import os
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 #! stripe listen --forward-to localhost:8000/api/subscriptions/webhook/
@@ -182,8 +182,8 @@ class CreatePaymentAPIView(APIView):
                 },
                 'quantity': 1,
             }],
-            success_url='http://localhost:3000/payment/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='http://localhost:3000/payment/cancel',
+            success_url=os.environ.get('success_url'),
+            cancel_url=os.environ.get('cancel_url'),
             metadata={'payment_id': payment.id},
         )
 

@@ -84,11 +84,23 @@ WSGI_APPLICATION = 'CoachLink.wsgi.application'
 #web soket
 ASGI_APPLICATION = 'CoachLink.asgi.application'
 
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
+#     },
+# }
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [{
+                'address': os.environ.get('CHANNEL_REDIS_URL', 'redis://127.0.0.1:6379/1'),
+                'socket_timeout': 10,
+            }],
+        },
     },
 }
+
 
 
 # Database

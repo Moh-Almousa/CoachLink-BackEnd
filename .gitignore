@@ -2,12 +2,14 @@
 .venv/
 venv/
 env/
-
+*.html
+اوامر براءة.txt
+تعليمات جانغو.txt
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-
+scrpet.py
 # Django
 db.sqlite3
 *.sqlite3
@@ -15,6 +17,7 @@ db.sqlite3
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # IDE
 .vscode/

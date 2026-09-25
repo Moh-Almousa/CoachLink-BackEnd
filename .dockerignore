@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+.git
+.env
+db.sqlite3
+media
+h.html
+scrpet.py
+*.txt
+!requirements.txt
+.vscode
+.idea
