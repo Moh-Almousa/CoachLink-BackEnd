@@ -33,8 +33,7 @@ class WorkoutSetLog(models.Model):
     )
     set_number = models.PositiveSmallIntegerField()
     reps = models.PositiveSmallIntegerField()
-    # MinValueValidator(0) مش (1) - تمرين بوزن الجسم بس (بدون أوزان إضافية)
-    # قيمته المنطقية صفر، مش لازم تكون موجبة تماماً متل وزن اللاعب نفسو
+    # 0 is allowed for bodyweight exercises
     weight = models.DecimalField(
         max_digits=5, decimal_places=2,
         validators=[MinValueValidator(0)],

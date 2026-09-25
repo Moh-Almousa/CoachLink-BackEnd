@@ -40,11 +40,7 @@ services:
     <<: *app
     command: celery -A CoachLink worker -l info
 
-  # المنبّه: بيقرأ CELERY_BEAT_SCHEDULE من settings وكل ما يجي وقت مهمة بيبعتها
-  # للـ celery worker عن طريق Redis - هو ما بينفذ شي بنفسو
-  # لازم تكون نسخة وحدة بس منو، وإلا كل مهمة بتنبعت مرتين
-  # --schedule: الملف يلي بيتذكر فيه beat آخر مرة شغّل كل مهمة، بنحطو بـ /tmp
-  # مشان ما يطلع بفولدر المشروع على جهازك (بسبب الـ volume .:/app)
+  # Periodic task scheduler (run a single instance only)
   celery-beat:
     <<: *app
     command: celery -A CoachLink beat -l info --schedule /tmp/celerybeat-schedule

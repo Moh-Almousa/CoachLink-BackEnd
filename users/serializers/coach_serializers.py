@@ -82,8 +82,6 @@ class CoachTransformationSerializer(serializers.ModelSerializer):
 
 
 #==== لعرض قائمة تقييمات المدرب الفردية (اسم اللاعب + صورته + التقييم) =====
-# CoachRating ما عندو حقل تعليق نصي أصلاً (انلغى من الفرونت من الأساس)،
-# فهاد بس رقم التقييم + هوية اللاعب يلي قيّم.
 class CoachRatingWithPlayerSerializer(serializers.ModelSerializer):
     playerName = serializers.CharField(source="player.user.full_name", read_only=True)
     playerImage = serializers.ImageField(source="player.image_profile_url", read_only=True)
@@ -135,8 +133,7 @@ class CoachPlayerCardSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source="player.user.full_name", read_only=True)
     goal = serializers.CharField(source="player.goal", read_only=True)
     image_profile_url =serializers.ImageField(source="player.image_profile_url", read_only=True)
-    # user_id (User.id الحقيقي، مختلف عن player=PlayerProfile.id) - لازم
-    # لشاشة المراسلة (SendMessageView.receiver_id بده User.id مش PlayerProfile.id)
+    # Player's User.id (used as receiver_id in chat)
     user_id = serializers.IntegerField(source="player.user_id", read_only=True)
     class Meta:
         model = SubscriptionPlayer

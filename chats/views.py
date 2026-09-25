@@ -14,19 +14,13 @@ from .serializers import ChatMessageSerializer,ConversationListSerializer,SendMe
 from drf_spectacular.utils import extend_schema,OpenApiResponse ,inline_serializer
 from rest_framework import serializers
 
-#دالى تحقق الاشتراك
-# بترجع True لو في اشتراك ACTIVE (بس ACTIVE، مش أي حالة) بين هاد اللاعب
-# وهاد الكوتش تحديداً - هاي هي البوابة الوحيدة يلي بتحدد فيه اللاعب/الكوتش
-# يقدروا يبلشوا/يكملوا تواصل جديد (مش شرط لقراءة تاريخ محادثة قديمة)
+# Check for an active subscription between the coach and player
 def has_active_subscription(coach,player):
     return SubscriptionPlayer.objects.filter(player=player,
                                              package__coach=coach,
                                              status=SubscriptionPlayer.Status.ACTIVE).exists()
 
-# دالة تحقق الشخص الي فتح محادثة هو صاحب المحادثة
-# بتستخدم لمنع أي لاعب/كوتش من قراءة محادثة مش إلو (IDOR) - عبر مقارنة
-# البروفايل (player_profile/coach_profile) تبع المستخدم المسجل دخولو
-# مع أطراف المحادثة نفسها
+# Check that the user is a participant in the conversation
 def is_conversation_participant(user,conversation):
     if user.role==User.Role.PLAYER:
         return conversation.player == user.player_profile
@@ -34,11 +28,7 @@ def is_conversation_participant(user,conversation):
         return conversation.coach == user.coach_profile
     return False
 
-# دالة تحقق مين فتحة شات ومين بدو يراسلو
-# بتاكد ع انو شات بين لاعب وكوتش فقط
-# بتحول receiver_id (User.id تبع الطرف التاني) لـ (coach_profile, player_profile)
-# اعتماداً على دور المستخدم الحالي - لو أنا لاعب، الطرف التاني المفروض
-# يكون كوتش وبالعكس. بترمي User.DoesNotExist لو الـ id مش موجود أصلاً
+# Resolve the (coach, player) pair from the receiver id
 def resolve_other_party(request_user,other_user_id):
     # بيرجع (coach_profile, player_profile) اعتماداً على دور المستخدم الحالي
     other_user=User.objects.get(id=other_user_id)
@@ -49,9 +39,6 @@ def resolve_other_party(request_user,other_user_id):
 # ============================================================================
 # GET /api/chat/conversations/  - جلب كل محادثات المستخدم الحالي (لاعب أو كوتش)
 # ============================================================================
-# بترجع محادثة واحدة أو أكتر، كل وحدة مع آخر رسالة وحالة الاشتراك الحالية.
-# side effect: أي رسالة توصل لهاد المستخدم وكانت لسا "sent" بتتحول تلقائياً
-# لـ "delivered" بمجرد نجاح هاد الطلب (لأنو نجاح الطلب معناه وصلت لجهازو).
 class ConversationListView(APIView):
     permission_classes=[IsAuthenticated]
     @extend_schema(
@@ -99,11 +86,6 @@ class ConversationListView(APIView):
 # ============================================================================
 # GET /api/chat/conversations/<pk>/messages/  - رسائل محادثة وحدة كاملة
 # ============================================================================
-# مسموحة طالما المستخدم طرف بالمحادثة (is_conversation_participant) - بغض
-# النظر عن حالة الاشتراك (قراءة التاريخ مسموحة دايماً، حتى لو الاشتراك خلص).
-# side effect: فتح المحادثة = قراءتها فعليًا، فأي رسالة من الطرف التاني كانت
-# "sent" أو "delivered" بتصير "read" مباشرة (دمجنا فيها منطق mark-read/ لحتى
-# الفرونت يستغني عن نداء API منفصل بس لفتح شات - نداء وحد كافي).
 class ConversationMessagesView(APIView):
     permission_classes=[IsAuthenticated]
     @extend_schema(
@@ -130,11 +112,6 @@ class ConversationMessagesView(APIView):
 # ============================================================================
 # POST /api/chat/messages/  - إرسال رسالة (الوحيدة المحمية بشرط الاشتراك النشط)
 # ============================================================================
-# لازم content أو attachment موجود (يتحقق جوا SendMessageInputSerializer).
-# لو ما في اشتراك ACTIVE بين المرسل والمستقبل حالياً -> 403 (هون بالضبط
-# بيتطبق قيد "بس المشترك بخطة نشطة يقدر يبلش/يكمل تواصل"). لو المحادثة
-# موجودة أصلاً من قبل (حتى لو كانت الاشتراك انلغى ورجع)، نفس المحادثة
-# بتنكمل عليها الرسائل الجديدة - ما بتنعمل محادثة جديدة.
 class SendMessageView(APIView):
     permission_classes=[IsAuthenticated]
     @extend_schema(

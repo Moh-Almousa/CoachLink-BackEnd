@@ -10,16 +10,18 @@ import os
 load_dotenv()
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# Read a comma-separated env variable as a list
+def env_list(name, default=''):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY =os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
 
 
 # Application definition
@@ -57,11 +59,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# السماح لسيرفر الفرونت اند (React على react-scripts) بالتواصل مع الباك اند وقت التطوير فقط
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# Frontend origins allowed to call the API
+CORS_ALLOWED_ORIGINS = env_list(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:3000,http://127.0.0.1:3000',
+)
+
+# Trusted origins for CSRF (e.g. admin login)
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
+
+# رابط الفرونت اند - بينحط بالإيميلات (متل رابط دعوة اللاعب)
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000/')
 
 ROOT_URLCONF = 'CoachLink.urls'
 
@@ -159,6 +167,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+# collectstatic output (served by nginx in production)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (الملفات يلي بيرفعها المستخدمين، متل شهادات الكوتش)
 MEDIA_URL = 'media/'
@@ -176,12 +186,7 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "CoachLink API",
     "DESCRIPTION": "API documentation for CoachLink",
     "VERSION": "1.0.0",
-    "SERVERS":[
-        {
-            "url":"http://127.0.0.1:8000",
-            "description":"Local server",
-         }
-    ]
+    # No SERVERS: Swagger uses the current host
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -210,14 +215,10 @@ EDAMAM_APP_KEY = os.environ.get('EDAMAM_APP_KEY')
 
 CELERY_BROKER_URL=os.environ.get('CELERY_BROKER_URL')
 
-# المنطقة الزمنية يلي بيحسب فيها celery beat أوقات الجدول تحت
-# (هيك hour=9 يعني 9 الصبح بتوقيتنا مش بتوقيت UTC)
+# Timezone used by the beat schedule
 CELERY_TIMEZONE = 'Asia/Damascus'
 
-# جدول المهام الدورية - celery beat بيقرأه وكل ما يجي وقت مهمة بيبعتها
-# عن طريق Redis للـ celery worker، والـ worker هو يلي بينفذها فعلياً
-# 'task' = المسار الكامل للدالة: <اسم التطبيق>.tasks.<اسم الدالة>
-# للاختبار: بدّل الـ schedule لـ crontab() (يعني كل دقيقة) وبعدين رجّعه
+# Periodic tasks (celery beat)
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
@@ -232,3 +233,27 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=0),
     },
 }
+
+
+# ===================== إعدادات الـ production بس =====================
+if not DEBUG:
+    # Trust the X-Forwarded-Proto header set by nginx
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # Secure cookies when served over HTTPS
+    if os.environ.get('USE_HTTPS', 'False') == 'True':
+        SESSION_COOKIE_SECURE = True   # كوكي الـ session ما بتنبعت إلا عبر https
+        CSRF_COOKIE_SECURE = True      # نفس الشي لكوكي الـ CSRF
+
+    # Log warnings and errors to the console
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {'class': 'logging.StreamHandler'},
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+        },
+    }

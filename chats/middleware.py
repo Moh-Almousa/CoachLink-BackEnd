@@ -1,6 +1,4 @@
-# middleware.py لتطبيق الشات - يتحقق من JWT وقت اتصال WebSocket
-# (لازم لأنو المتصفح ما بيقدر يبعت Authorization header مع WebSocket،
-# فبنبعت التوكن كـ query param: ws://host/ws/chat/5/?token=xxx)
+# JWT authentication for WebSocket connections (?token=...)
 
 from urllib.parse import parse_qs
 

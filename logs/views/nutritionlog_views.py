@@ -17,10 +17,7 @@ from ..serializers.nutritionlog_serializers import( NutritionLogSerializer,
 from drf_spectacular.utils import extend_schema,OpenApiResponse ,inline_serializer
 from rest_framework import serializers
 
-# تسجيل "غياب" حقيقي (log فعلي بقيم 0) لأي وجبة تبع يوم فات ومالها لوج
-# إطلاقاً - بتشتغل كـ backfill لما اللاعب (أو الكوتش) يفتح NutritionProfileView،
-# مش بشكل مجدول تلقائياً (ما في scheduler بالمشروع - قرار 2026-08-16).
-# idempotent: get_or_create بمفتاح meal، فما بتكرر لو انعملت قبل لنفس الوجبة.
+# Create truant logs for missed meals of past days
 def backfill_missed_nutrition_logs(plan):
     current_day_index = plan.current_day_index()
 
@@ -79,10 +76,7 @@ class LogMealCompletionView(APIView):
         if not meal.day.week.plan.is_active == True :
             return Response({"message": "The plan is not active."},status=status.HTTP_403_FORBIDDEN)
 
-        # اليوم لازم يكون "اليوم الحالي" بالضبط (مش فايت، مش لسا ما وصل) -
-        # وإلا اليوم يا إما مقفول (فاتو وقتو، لازم يصير truant عبر backfill
-        # لما البروفايل ينقرا) أو لسا ما إجا دوره. بدون هالتحقق كان ممكن
-        # اللاعب يشيّك وجبة قديمة صارت truant أصلاً ويبدّلها complete متأخر.
+        # Only today's meals can be logged
         day = meal.day
         meal_day_index = (day.week.number_week - 1) * 7 + day.number_day
         if meal_day_index != meal.day.week.plan.current_day_index():
@@ -151,8 +145,7 @@ class NutritionProfileView (APIView):
                 {"error": "You do not have permission to access this player's data."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        # آخر خطة اتعملت لهاد اللاعب - بغض النظر عن is_active، لأنو هاد البروفايل
-        # بيمثل آخر تنفيذ لآخر خطة، مش شرط تكون نشطة رسمياً هلق
+        # Latest plan for this player, regardless of is_active
         plan=NutritionPlan.objects.filter(player=player).order_by('-created_at').first()
         if not plan:
             return Response({"plan":None,"logs":[]},status=status.HTTP_200_OK)

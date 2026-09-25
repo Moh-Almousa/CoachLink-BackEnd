@@ -1,7 +1,4 @@
-# consumers.py لتطبيق الشات - Consumer واحد بسيط لكل محادثة.
-# دوره الوحيد: ضم المستخدم لـ "غرفة" المحادثة وتوصيل الرسائل الجاهزة له
-# لحظياً. الحفظ بقاعدة البيانات يضل بالكامل عن طريق SendMessageView (REST)
-# - الاتجاه هون سيرفر->متصفح بس، ما في استقبال إرسال حقيقي من هون.
+# WebSocket consumer for chat conversations
 
 import json
 
@@ -35,8 +32,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None): # دالة الاستقبال من الفروند 
-        # الإرسال يضل عن طريق REST (SendMessageView) بس - منتجاهل أي شي
-        # يجي من هون عشان ما ينكسر الاتصال
+        # Messages are sent through the REST API; ignore client frames
         pass
 
     # بتنستدعى تلقائياً لما حدا يعمل group_send بـ type='chat_message'

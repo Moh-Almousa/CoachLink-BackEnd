@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from ..models import User,  CoachProfile, PlayerProfile, AdminProfile ,Certificate
 
-# بيانات الكوتش المختصرة، مضمّنة جوا كل شهادة عشان جدول الأدمن يقدر يعرض
-# اسم/إيميل/صورة الكوتش بدون طلب إضافي منفصل لكل شهادة.
+# Compact coach info embedded in each certificate
 class CoachProfileMiniSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
@@ -27,8 +26,7 @@ class CertificateReviewSerializer(serializers.Serializer):
     rejection_reason = serializers.ChoiceField(
         choices=Certificate.RejectionReason.choices, required=False, allow_null=True
     )
-    # نص حر اختياري - بيستخدم بشكل رئيسي لما rejection_reason = "Other"
-    # (تفاصيل الرفض يلي القيم الثابتة فوق ما بتغطيها).
+    # Optional details, mainly for rejection_reason "Other"
     note = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
 
     def validate(self, data):

@@ -24,8 +24,6 @@ from rest_framework import serializers
 import os
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-#! stripe listen --forward-to localhost:8000/api/subscriptions/webhook/
-
 # نسبة أرباح المنصة الافتراضية من كل عملية دفع
 PLATFORM_PERCENTAGE = Decimal('15')
 
@@ -107,9 +105,7 @@ class SubscriptionPackageView(APIView):
             return Response({'message': 'Package deleted successfully.', 'deactivated': False},
                              status=status.HTTP_200_OK)
         except ProtectedError:
-            # الباقة مرتبطة بدفعات/اشتراكات فعلية (on_delete=PROTECT بـ Payment/SubscriptionPlayer)
-            # فحذفها فعليًا بيكسر تاريخ الدفعات - بنكتفي بتعطيلها (بتختفي من قائمة الكوتش
-            # لأنو الـ GET أصلاً بيفلتر is_active=True) بدل ما نحذفها فعليًا من القاعدة.
+            # Package has related payments/subscriptions: deactivate instead of deleting
             package.is_active = False
             package.save(update_fields=['is_active'])
             return Response(
@@ -156,8 +152,7 @@ class CreatePaymentAPIView(APIView):
             )
 
         price = package.price
-        # الأرباح لسا ما محسوبة هون قصدًا: الدفع لسا PENDING ومش مؤكد إنو رح ينجح.
-        # الحساب الفعلي وتخزينه بيصير بالـ webhook (stripe_webhook) لما Stripe يأكد نجاح الدفع.
+        # Create a pending payment (profits are calculated in the webhook)
         payment = Payment.objects.create(
             player=player,
             coach=package.coach,
@@ -207,15 +202,12 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
 
     if event['type'] == 'checkout.session.completed':
-        # event['data']['object'] من نوع StripeObject، وبنسخة stripe-python المثبتة
-        # هون هاد النوع ما بيرث من dict وما عندو .get() -> AttributeError.
-        # to_dict() بيحولها (وكل شي جواها متل metadata) لـ dict عادي فيه .get().
+        # Convert the StripeObject to a plain dict
         session = event['data']['object'].to_dict()
         payment_id = session.get('metadata', {}).get('payment_id')
         try:
             with transaction.atomic():
-                # select_for_update: قفل صف الـ Payment لحتى ما توصلين نسختين من نفس
-                # الـ webhook (Stripe ممكن يعيد الإرسال) ويعالجوه سوا فيصير تكرار.
+                # Lock the payment row to handle duplicate webhook deliveries
                 payment = Payment.objects.select_for_update().select_related('package').get(id=payment_id)
 
                 if payment.payment_status != Payment.Status.COMPLETED:
@@ -239,16 +231,10 @@ def stripe_webhook(request):
                             end_date=add_months(start_date, payment.package.number_month),
                             status=SubscriptionPlayer.Status.ACTIVE,
                         )
-                        # الشات هو الوسيلة الوحيدة يلي بتقابل الكوتش واللاعب ببعض،
-                        # فبمجرد ما الاشتراك ينفعل لازم تنعمل قناة دردشة فاضية بينهم
-                        # فوراً (بدل ما تنتظر أول رسالة). get_or_create لأنو ممكن
-                        # يكونوا اشتركوا سابقاً وانتهى الاشتراك، فالمحادثة أصلاً موجودة
-                        # (UniqueConstraint على coach+player بـ ChatConversation).
+                        # Open a chat between the coach and player
                         ChatConversation.objects.get_or_create(coach=payment.coach, player=payment.player)
                     except IntegrityError:
-                        # اللاعب صار عندو اشتراك نشط تاني بالفترة بين إنشاء الدفعة واكتمالها
-                        # (مثلاً فتح صفحتي دفع بنفس الوقت). الدفع نجح فعلياً عند Stripe، فلازم
-                        # مراجعة يدوية (استرجاع المبلغ أو ربطه باشتراك تاني) بدل ما نخسر الفلوس بصمت.
+                        # Player already has another active subscription: needs manual review
                         pass
         except Payment.DoesNotExist:
             return HttpResponse(status=404)

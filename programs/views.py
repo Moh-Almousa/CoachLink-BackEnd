@@ -83,11 +83,7 @@ class ExerciseSearchView(APIView):
                     status=status.HTTP_502_BAD_GATEWAY,
                 )
         else:
-            # ما في بحث لسا (تصفح أولي): مسار /exercises الافتراضي بمزوّدنا
-            # بيرجع نفس أول 10 نتائج ثابتة دايماً (تحققنا فعلياً - كلها تمارين
-            # بطن بالصدفة لأنها أول شي أبجدياً). بدلها، منجيب شوية تمارين من
-            # كذا فئة جسم مختلفة بالتوازي (ThreadPoolExecutor) لحتى المدرب
-            # يشوف تنوع حقيقي قبل ما يبحث.
+            # No search term: fetch a few exercises per body part in parallel
             raw_exercises = []
             with ThreadPoolExecutor(max_workers=len(BROWSE_BODY_PARTS)) as executor:
                 future_to_part = {
@@ -191,9 +187,7 @@ class CoachEditeProgame(APIView):
         ).exists()
 
     def _get_active_plan(self, coach, player):
-        # ما في is_active بهالموديل (بعكس NutritionPlan) - لو صار عند اللاعب
-        # أكتر من برنامج لسا ما خلصت مدتو (نادر بس ممكن)، لازم نرجّع الأحدث
-        # (نفس ترتيب WorkoutProfileView بالضبط) مش أي وحد عشوائي بـ .first()
+        # Unfinished plans, newest first
         return ProgramPlanExercise.objects.filter(
             player=player, coach=coach, end_at__gt=timezone.now()
         ).order_by('-created_at')

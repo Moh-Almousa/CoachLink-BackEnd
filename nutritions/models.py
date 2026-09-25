@@ -33,11 +33,7 @@ class NutritionPlan(models.Model):
     class Meta:
         db_table = 'Nutrition_plans'
 
-    # رقم اليوم الحالي بالخطة (1-based)، محسوب من الوقت الحقيقي المنقضي من
-    # start_at - نفس مبدأ current_day_index بـ compute_workout_day_statuses
-    # (logs/views/workoutlog_views.py). مصدر واحد مشترك يستخدمه أي كود
-    # محتاج "شو اليوم الحالي بالخطة" (dashboard، backfill الغياب، تحقق
-    # تسجيل الوجبات) بدل ما كل مكان يعيد نفس الحساب لحاله.
+    # Current day number in the plan (1-based), based on elapsed time
     def current_day_index(self):
         hours_elapsed = (timezone.now() - self.start_at).total_seconds() / 3600
         return int(hours_elapsed // 24) + 1

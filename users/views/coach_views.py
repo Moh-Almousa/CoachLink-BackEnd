@@ -240,7 +240,7 @@ class PlayerInvitationView(APIView):
             coach = request.user.coach_profile
             coach_name = coach.user.full_name
             coach_email = coach.user.email
-            invitation_link= "http://localhost:3000/"
+            invitation_link= settings.FRONTEND_URL
             send_mail(subject=f'{coach_name} invited you to join CoachLink',
             message=(
                 f'Hello,\n\n'
@@ -260,12 +260,7 @@ class PlayerInvitationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 def get_coach_recent_activity(coach, limit=5):
-    """
-    بتجمع آخر نشاطات لاعبين هاد الكوتش من 4 مصادر مختلفة، وبترجعهم
-    بشكل موحّد مرتب زمنياً تنازلي. كل المصادر مفلترة عبر coach مباشرة
-    (WorkoutLog/NutritionLog عبر سلسلة الخطة->الكوتش، والخطتين مباشرة)
-    - يعني بس نشاطات مرتبطة بخطط أنشأها هاد الكوتش تحديداً.
-    """
+    """Collect the latest activities of this coach's players, newest first."""
     activities = []
 
     # 1) تمارين نُفّذت

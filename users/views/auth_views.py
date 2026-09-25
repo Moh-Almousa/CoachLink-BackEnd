@@ -35,9 +35,7 @@ class LocalRegisterView(APIView):
         #     f"Serializer validation: "
         #     f"{time.perf_counter() - start:.4f} seconds"
         # )
-            # transaction.atomic: لو فشل إرسال الإيميل (مثلاً انقطاع SMTP مؤقت)،
-            # لازم نلغي إنشاء المستخدم وOTP كمان - وإلا بيضل حساب "معلّق" بالقاعدة
-            # (مسجّل بس ماله أي OTP فعلي وصل، وما فيك تسجّل بنفس الإيميل مرة تانية)
+            # Create the user and OTP atomically
             with transaction.atomic():
                 # start = time.perf_counter()
                 user=serializer.save()

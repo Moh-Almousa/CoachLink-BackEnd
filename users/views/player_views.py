@@ -134,9 +134,7 @@ class PlayerFitnessProfileViews(APIView):
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 
-# يوم التغذية الحالي محسوب بنفس مبدأ compute_workout_day_statuses بالتمارين
-# (logs/views/workoutlog_views.py) - نفس صيغة current_day_index المعتمدة على
-# الوقت الحقيقي المنقضي من start_at، مش على إكمال اللاعب فقط، حتى تبقى واقعية.
+# Calorie stats for the current day of the nutrition plan
 def get_current_nutrition_day_stats(plan):
     now = timezone.now()
     hours_elapsed = (now - plan.start_at).total_seconds() / 3600
@@ -201,10 +199,7 @@ class PlayerDashboardView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 
-# تقييم الكوتش - حصراً للاعب المشترك بباقة هاد الكوتش واشتراكو Active.
-# IsActivePlayerOfCoach (users/permissions.py) بتعمل هاد الفحص لحالها قبل
-# ما توصل post() أصلاً - بتقرا coachId من الـ body وبترجع 403 لو مش مشترك
-# أو الاشتراك مش نشط، فما في داعي نكرر نفس التحقق هون.
+# Rate a coach (subscription check is done by IsActivePlayerOfCoach)
 class PlayerRateCoachView(APIView):
     permission_classes=[IsAuthenticated,IsPlayer,IsActivePlayerOfCoach]
     @extend_schema(

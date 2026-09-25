@@ -4,6 +4,8 @@
 
 تم تطوير الـ Backend باستخدام **Python, Django, وDjango REST Framework**، مع استخدام **PostgreSQL** كقاعدة بيانات، وتقسيم النظام إلى تطبيقات مستقلة حسب الوظيفة، مما يساعد على تنظيم الكود وتسهيل تطوير وصيانة المشروع.
 
+المشروع مجهّز بالكامل للعمل عبر **Docker**: بيئة تطوير تعمل بأمر واحد (Django + PostgreSQL + Redis + Celery + Celery Beat)، ونسخة **Production** منفصلة خلف **Nginx** وجاهزة للنشر على أي سيرفر.
+
 ---
 
 ## 🚀 الميزات الرئيسية
@@ -128,7 +130,19 @@ Stripe Webhook
 * تفويت وجبة.
 * قبول شهادة المدرب.
 * رفض شهادة المدرب.
+* قرب انتهاء الاشتراك.
 * بعض الأحداث الإدارية.
+
+---
+
+## ⏰ المهام المجدولة (Celery Beat)
+
+يتم تنفيذ المهام الدورية تلقائياً باستخدام **Celery Beat**، الذي يرسل كل مهمة في موعدها عبر Redis إلى **Celery Worker** لتنفيذها في الخلفية:
+
+| المهمة | التوقيت | الوظيفة |
+| --- | --- | --- |
+| `send_expiry_reminders_task` | يومياً الساعة 9:00 صباحاً | تذكير اللاعبين الذين ينتهي اشتراكهم خلال 3 أيام (إشعار + بريد إلكتروني) |
+| `expire_subscriptions_task` | كل ساعة | تحويل الاشتراكات المنتهية من `active` إلى `finish` |
 
 ---
 
@@ -141,14 +155,18 @@ Stripe Webhook
 ```text
 Client
    ↓
-WebSocket Connection
+WebSocket Connection (ws://.../ws/chat/<id>/?token=JWT)
    ↓
-Django Channels
+Daphne + Django Channels
+   ↓
+Redis Channel Layer
    ↓
 Chat Consumer
    ↓
 Conversation
 ```
+
+يتم حفظ الرسائل عبر REST API، ثم تُبث فوراً لطرفي المحادثة عبر **Redis Channel Layer**، مما يسمح بتشغيل أكثر من نسخة من السيرفر.
 
 ---
 
@@ -180,6 +198,14 @@ CoachLink-BackEnd/
 │
 ├── chats/                  # المحادثات الفورية وWebSockets
 │
+├── nginx/
+│   └── default.conf        # إعدادات Nginx لنسخة الـ Production
+│
+├── Dockerfile              # بناء صورة الـ Backend
+├── docker-compose.yml      # بيئة التطوير
+├── docker-compose.prod.yml # بيئة الـ Production
+├── .dockerignore
+├── .env.example            # نموذج متغيرات البيئة
 ├── manage.py
 ├── requirements.txt
 └── .gitignore
@@ -198,9 +224,15 @@ CoachLink-BackEnd/
 | Simple JWT            | المصادقة باستخدام JWT        |
 | Django Channels       | دعم الاتصال الفوري           |
 | WebSockets            | المحادثات الفورية            |
+| Daphne (ASGI)         | سيرفر HTTP وWebSocket        |
+| Redis                 | Celery Broker وChannel Layer |
 | Celery                | تنفيذ المهام في الخلفية      |
+| Celery Beat           | جدولة المهام الدورية         |
 | Stripe                | معالجة المدفوعات             |
 | Google Authentication | تسجيل الدخول باستخدام Google |
+| Docker                | تشغيل المشروع داخل Containers |
+| Docker Compose        | إدارة جميع الخدمات بأمر واحد |
+| Nginx                 | Reverse Proxy وخدمة الملفات  |
 | Git                   | Version Control              |
 | GitHub                | استضافة وإدارة الكود         |
 | Swagger / OpenAPI     | توثيق واختبار الـ APIs       |
@@ -288,6 +320,13 @@ Chats
 * Authentication.
 * HTTP Status Codes.
 
+بعد تشغيل المشروع يمكن فتح التوثيق من:
+
+```text
+http://localhost:8000/api/docs/     # Swagger UI
+http://localhost:8000/api/schema/   # OpenAPI Schema
+```
+
 ---
 
 # ⚙️ تشغيل المشروع
@@ -299,78 +338,141 @@ git clone https://github.com/Moh-Almousa/CoachLink-BackEnd.git
 cd CoachLink-BackEnd
 ```
 
-## 2. إنشاء Virtual Environment
+## 2. إعداد Environment Variables
 
-على Windows:
+يحتوي المشروع على ملف **`.env.example`** كنموذج لجميع المتغيرات المطلوبة. انسخه إلى `.env` ثم عبّئ القيم الحقيقية:
 
-```powershell
+```bash
+cp .env.example .env        # Linux / macOS
+copy .env.example .env      # Windows
+```
+
+| المجموعة | المتغيرات |
+| --- | --- |
+| Django | `SECRET_KEY` |
+| قاعدة البيانات | `DATABASE_URL`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` |
+| Redis | `CELERY_BROKER_URL`, `CHANNEL_REDIS_URL` |
+| Stripe | `STRIPE_PUBLIC_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `success_url`, `cancel_url` |
+| البريد الإلكتروني | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` |
+| APIs خارجية | `EXERCISEDB_RAPIDAPI_KEY`, `EXERCISEDB_RAPIDAPI_HOST`, `EDAMAM_APP_ID`, `EDAMAM_APP_KEY` |
+| Production فقط | `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, `USE_HTTPS` |
+
+> ملف `.env` يحتوي على بيانات سرية، لذلك هو مستثنى من Git ومن صورة Docker، ويبقى `.env.example` فقط في المستودع.
+
+## 3. التشغيل باستخدام Docker (الطريقة المقترحة)
+
+المتطلبات: **Docker Desktop** فقط، بدون الحاجة لتثبيت Python أو PostgreSQL أو Redis على الجهاز.
+
+```bash
+docker compose up -d --build
+```
+
+يقوم هذا الأمر بتشغيل جميع الخدمات:
+
+| الخدمة | الوظيفة | الوصول من الجهاز |
+| --- | --- | --- |
+| `web` | Django (runserver مع Daphne، يدعم WebSocket) ويطبق الـ migrations تلقائياً | `http://localhost:8000` |
+| `db` | PostgreSQL 17 | `localhost:5433` |
+| `redis` | Celery Broker وChannel Layer | داخلي فقط |
+| `celery` | تنفيذ المهام في الخلفية | داخلي فقط |
+| `celery-beat` | جدولة المهام الدورية | داخلي فقط |
+
+يتم ربط مجلد المشروع بالـ Container، لذلك أي تعديل على الكود يظهر مباشرة بدون إعادة البناء.
+
+أوامر مفيدة:
+
+```bash
+docker compose ps                                        # حالة الخدمات
+docker compose logs -f web                               # متابعة الـ logs
+docker compose exec web python manage.py createsuperuser # إنشاء حساب Admin
+docker compose exec web python manage.py makemigrations  # أي أمر Django
+docker compose restart celery celery-beat                # بعد تعديل المهام
+docker compose up -d --build                             # بعد تعديل requirements.txt أو Dockerfile
+docker compose down                                      # إيقاف الخدمات (البيانات تبقى)
+```
+
+## 4. التشغيل بدون Docker
+
+يتطلب وجود **PostgreSQL** و**Redis** على الجهاز، وضبط `DATABASE_URL` و`CELERY_BROKER_URL` و`CHANNEL_REDIS_URL` في `.env` على `localhost`.
+
+```bash
 python -m venv .venv
-```
+.venv\Scripts\activate            # Windows
+source .venv/bin/activate         # Linux / macOS
 
-ثم:
-
-```powershell
-.venv\Scripts\activate
-```
-
-على Linux / macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-## 3. تثبيت المتطلبات
-
-```bash
 pip install -r requirements.txt
-```
-
-## 4. إعداد Environment Variables
-
-أنشئ ملف:
-
-```text
-.env
-```
-
-في مجلد المشروع، وأضف المتغيرات المطلوبة.
-
-مثال:
-
-```env
-SECRET_KEY=your-secret-key
-DEBUG=True
-
-DATABASE_NAME=your-database-name
-DATABASE_USER=your-database-user
-DATABASE_PASSWORD=your-database-password
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-
-STRIPE_SECRET_KEY=your-stripe-secret-key
-STRIPE_WEBHOOK_SECRET=your-stripe-webhook-secret
-
-GOOGLE_CLIENT_ID=your-google-client-id
-```
-
-
-## 5. تشغيل Database Migrations
-
-```bash
 python manage.py migrate
-```
-
-## 6. تشغيل المشروع
-
-```bash
 python manage.py runserver
 ```
 
-سيعمل الـ API بشكل افتراضي على:
+وفي نوافذ Terminal منفصلة:
+
+```bash
+celery -A CoachLink worker -l info          # على Windows أضف: --pool=solo
+celery -A CoachLink beat -l info
+```
+
+## 5. اختبار Stripe Webhook محلياً
+
+```bash
+stripe listen --forward-to localhost:8000/api/subscriptions/webhook/
+```
+
+وضع قيمة الـ Signing Secret الناتجة في `STRIPE_WEBHOOK_SECRET`.
+
+---
+
+# 🚀 النشر (Production)
+
+يحتوي المشروع على نسخة **Production** منفصلة في `docker-compose.prod.yml`، بحيث يعمل نفس الكود في التطوير والنشر مع اختلاف الإعدادات فقط.
 
 ```text
-http://127.0.0.1:8000/
+Internet
+   ↓
+Nginx (:80)
+   ├── /static/  → ملفات Admin وSwagger (collectstatic)
+   ├── /media/   → الملفات المرفوعة
+   ├── /ws/      → Daphne (WebSocket)
+   └── /         → Daphne (REST API, Admin)
+                     ↓
+          PostgreSQL · Redis · Celery · Celery Beat
 ```
+
+### الفرق عن بيئة التطوير
+
+| | التطوير | Production |
+| --- | --- | --- |
+| السيرفر | `runserver` | `daphne` |
+| `DEBUG` | `True` | `False` (مفروض من docker-compose) |
+| الكود | مربوط بمجلد المشروع | منسوخ داخل الصورة |
+| الملفات الثابتة | Django | `collectstatic` + Nginx |
+| الملفات المرفوعة | مجلد `media/` | Docker Volume دائم |
+| المنافذ المفتوحة | `8000`, `5433` | `80` فقط (Nginx) |
+| إعادة التشغيل | يدوي | تلقائي (`restart: unless-stopped`) |
+
+### تجهيزات النشر في الكود
+
+* قراءة الإعدادات الحساسة من متغيرات البيئة (`DEBUG`, `ALLOWED_HOSTS`, `CORS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL`).
+* إعدادات خاصة بالـ Production عند `DEBUG=False`: دعم HTTPS خلف Reverse Proxy (`SECURE_PROXY_SSL_HEADER`)، Secure Cookies عند تفعيل `USE_HTTPS`، وطباعة الأخطاء في الـ logs.
+* تطبيق الـ migrations وجمع الملفات الثابتة تلقائياً عند كل تشغيل.
+* قاعدة البيانات وRedis غير مكشوفة خارج شبكة Docker.
+* استثناء ملفات `.env` من صورة Docker عبر `.dockerignore`.
+
+### خطوات النشر على سيرفر
+
+1. تثبيت Docker على السيرفر ثم تحميل المشروع.
+2. إنشاء `.env` من `.env.example` مع `SECRET_KEY` جديد وكلمة مرور قوية لقاعدة البيانات، وتفعيل قسم **Production only** بالدومين الحقيقي.
+3. التشغيل:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+```
+
+4. إضافة Webhook endpoint في Stripe Dashboard على `https://<domain>/api/subscriptions/webhook/` لحدث `checkout.session.completed`.
+5. تفعيل HTTPS بشهادة SSL (مثل Let's Encrypt) ثم ضبط `USE_HTTPS=True`.
+
+> إعدادات Nginx الحالية تعمل على HTTP (المنفذ 80)، وإضافة HTTPS تتطلب ربط شهادة SSL بـ Nginx.
 
 ---
 
@@ -415,9 +517,10 @@ Chats
 * الاشتراكات والمدفوعات.
 * التكامل مع External APIs.
 * Real-Time Communication.
-* Background Tasks.
+* Background Tasks والمهام المجدولة.
 * استخدام PostgreSQL لتخزين البيانات.
 * تنظيم المشروع إلى Django Applications مستقلة.
+* Containerization باستخدام Docker وتجهيز المشروع للنشر خلف Nginx.
 
 ---
 
@@ -439,6 +542,9 @@ Django ORM
 PostgreSQL
 JWT Authentication
 WebSockets
+Celery & Redis
+Docker & Docker Compose
+Nginx
 Git & GitHub
 Backend Architecture
 ```
@@ -449,4 +555,4 @@ Backend Architecture
 
 **CoachLink — Fitness Coaching Platform**
 
-مشروع Backend تم تطويره باستخدام Django وDjango REST Framework لتطبيق مفاهيم Backend Development وبناء نظام متكامل يتضمن Authentication وAuthorization وإدارة البيانات والتكامل مع الخدمات الخارجية والمدفوعات والاتصال الفوري.
+مشروع Backend تم تطويره باستخدام Django وDjango REST Framework لتطبيق مفاهيم Backend Development وبناء نظام متكامل يتضمن Authentication وAuthorization وإدارة البيانات والتكامل مع الخدمات الخارجية والمدفوعات والاتصال الفوري، مع تشغيله بالكامل عبر Docker وتجهيزه للنشر.
