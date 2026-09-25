@@ -209,3 +209,26 @@ EDAMAM_APP_ID = os.environ.get('EDAMAM_APP_ID')
 EDAMAM_APP_KEY = os.environ.get('EDAMAM_APP_KEY')
 
 CELERY_BROKER_URL=os.environ.get('CELERY_BROKER_URL')
+
+# المنطقة الزمنية يلي بيحسب فيها celery beat أوقات الجدول تحت
+# (هيك hour=9 يعني 9 الصبح بتوقيتنا مش بتوقيت UTC)
+CELERY_TIMEZONE = 'Asia/Damascus'
+
+# جدول المهام الدورية - celery beat بيقرأه وكل ما يجي وقت مهمة بيبعتها
+# عن طريق Redis للـ celery worker، والـ worker هو يلي بينفذها فعلياً
+# 'task' = المسار الكامل للدالة: <اسم التطبيق>.tasks.<اسم الدالة>
+# للاختبار: بدّل الـ schedule لـ crontab() (يعني كل دقيقة) وبعدين رجّعه
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # تذكير اللاعبين يلي اشتراكهن رح يخلص خلال 3 أيام - كل يوم الساعة 9:00 الصبح
+    'send-expiry-reminders-daily': {
+        'task': 'notifications.tasks.send_expiry_reminders_task',
+        'schedule': crontab(hour=9, minute=0),
+    },
+    # تحويل الاشتراكات المنتهية من active لـ finish - كل ساعة عند الدقيقة 0
+    'expire-subscriptions-hourly': {
+        'task': 'subscriptions.tasks.expire_subscriptions_task',
+        'schedule': crontab(minute=0),
+    },
+}
