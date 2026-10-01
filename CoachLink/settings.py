@@ -167,7 +167,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-# collectstatic output (served by nginx in production)
+# collectstatic output
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (الملفات يلي بيرفعها المستخدمين، متل شهادات الكوتش)
@@ -239,27 +239,3 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=0),
     },
 }
-
-
-# ===================== إعدادات الـ production بس =====================
-if not DEBUG:
-    # Trust the X-Forwarded-Proto header set by nginx
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-    # Secure cookies when served over HTTPS
-    if os.environ.get('USE_HTTPS', 'False') == 'True':
-        SESSION_COOKIE_SECURE = True   # كوكي الـ session ما بتنبعت إلا عبر https
-        CSRF_COOKIE_SECURE = True      # نفس الشي لكوكي الـ CSRF
-
-    # Log warnings and errors to the console
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'console': {'class': 'logging.StreamHandler'},
-        },
-        'root': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-        },
-    }

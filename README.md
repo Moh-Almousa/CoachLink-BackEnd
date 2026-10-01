@@ -4,7 +4,7 @@
 
 تم تطوير الـ Backend باستخدام **Python, Django, وDjango REST Framework**، مع استخدام **PostgreSQL** كقاعدة بيانات، وتقسيم النظام إلى تطبيقات مستقلة حسب الوظيفة، مما يساعد على تنظيم الكود وتسهيل تطوير وصيانة المشروع.
 
-المشروع مجهّز بالكامل للعمل عبر **Docker**: بيئة تطوير تعمل بأمر واحد (Django + PostgreSQL + Redis + Celery + Celery Beat)، ونسخة **Production** منفصلة خلف **Nginx** وجاهزة للنشر على أي سيرفر.
+المشروع مجهّز بالكامل للعمل عبر **Docker**: بيئة تطوير تعمل بأمر واحد (Django + PostgreSQL + Redis + Celery + Celery Beat).
 
 ---
 
@@ -198,12 +198,8 @@ CoachLink-BackEnd/
 │
 ├── chats/                  # المحادثات الفورية وWebSockets
 │
-├── nginx/
-│   └── default.conf        # إعدادات Nginx لنسخة الـ Production
-│
 ├── Dockerfile              # بناء صورة الـ Backend
 ├── docker-compose.yml      # بيئة التطوير
-├── docker-compose.prod.yml # بيئة الـ Production
 ├── .dockerignore
 ├── .env.example            # نموذج متغيرات البيئة
 ├── manage.py
@@ -232,7 +228,6 @@ CoachLink-BackEnd/
 | Google Authentication | تسجيل الدخول باستخدام Google |
 | Docker                | تشغيل المشروع داخل Containers |
 | Docker Compose        | إدارة جميع الخدمات بأمر واحد |
-| Nginx                 | Reverse Proxy وخدمة الملفات  |
 | Git                   | Version Control              |
 | GitHub                | استضافة وإدارة الكود         |
 | Swagger / OpenAPI     | توثيق واختبار الـ APIs       |
@@ -355,7 +350,6 @@ copy .env.example .env      # Windows
 | Stripe | `STRIPE_PUBLIC_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `success_url`, `cancel_url` |
 | البريد الإلكتروني | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` |
 | APIs خارجية | `EXERCISEDB_RAPIDAPI_KEY`, `EXERCISEDB_RAPIDAPI_HOST`, `EDAMAM_APP_ID`, `EDAMAM_APP_KEY` |
-| Production فقط | `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, `USE_HTTPS` |
 
 > ملف `.env` يحتوي على بيانات سرية، لذلك هو مستثنى من Git ومن صورة Docker، ويبقى `.env.example` فقط في المستودع.
 
@@ -422,60 +416,6 @@ stripe listen --forward-to localhost:8000/api/subscriptions/webhook/
 
 ---
 
-# 🚀 النشر (Production)
-
-يحتوي المشروع على نسخة **Production** منفصلة في `docker-compose.prod.yml`، بحيث يعمل نفس الكود في التطوير والنشر مع اختلاف الإعدادات فقط.
-
-```text
-Internet
-   ↓
-Nginx (:80)
-   ├── /static/  → ملفات Admin وSwagger (collectstatic)
-   ├── /media/   → الملفات المرفوعة
-   ├── /ws/      → Daphne (WebSocket)
-   └── /         → Daphne (REST API, Admin)
-                     ↓
-          PostgreSQL · Redis · Celery · Celery Beat
-```
-
-### الفرق عن بيئة التطوير
-
-| | التطوير | Production |
-| --- | --- | --- |
-| السيرفر | `runserver` | `daphne` |
-| `DEBUG` | `True` | `False` (مفروض من docker-compose) |
-| الكود | مربوط بمجلد المشروع | منسوخ داخل الصورة |
-| الملفات الثابتة | Django | `collectstatic` + Nginx |
-| الملفات المرفوعة | مجلد `media/` | Docker Volume دائم |
-| المنافذ المفتوحة | `8000`, `5433` | `80` فقط (Nginx) |
-| إعادة التشغيل | يدوي | تلقائي (`restart: unless-stopped`) |
-
-### تجهيزات النشر في الكود
-
-* قراءة الإعدادات الحساسة من متغيرات البيئة (`DEBUG`, `ALLOWED_HOSTS`, `CORS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL`).
-* إعدادات خاصة بالـ Production عند `DEBUG=False`: دعم HTTPS خلف Reverse Proxy (`SECURE_PROXY_SSL_HEADER`)، Secure Cookies عند تفعيل `USE_HTTPS`، وطباعة الأخطاء في الـ logs.
-* تطبيق الـ migrations وجمع الملفات الثابتة تلقائياً عند كل تشغيل.
-* قاعدة البيانات وRedis غير مكشوفة خارج شبكة Docker.
-* استثناء ملفات `.env` من صورة Docker عبر `.dockerignore`.
-
-### خطوات النشر على سيرفر
-
-1. تثبيت Docker على السيرفر ثم تحميل المشروع.
-2. إنشاء `.env` من `.env.example` مع `SECRET_KEY` جديد وكلمة مرور قوية لقاعدة البيانات، وتفعيل قسم **Production only** بالدومين الحقيقي.
-3. التشغيل:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
-```
-
-4. إضافة Webhook endpoint في Stripe Dashboard على `https://<domain>/api/subscriptions/webhook/` لحدث `checkout.session.completed`.
-5. تفعيل HTTPS بشهادة SSL (مثل Let's Encrypt) ثم ضبط `USE_HTTPS=True`.
-
-> إعدادات Nginx الحالية تعمل على HTTP (المنفذ 80)، وإضافة HTTPS تتطلب ربط شهادة SSL بـ Nginx.
-
----
-
 # 🗄️ قاعدة البيانات
 
 يستخدم المشروع **PostgreSQL** لإدارة وتخزين بيانات المنصة.
@@ -520,7 +460,7 @@ Chats
 * Background Tasks والمهام المجدولة.
 * استخدام PostgreSQL لتخزين البيانات.
 * تنظيم المشروع إلى Django Applications مستقلة.
-* Containerization باستخدام Docker وتجهيز المشروع للنشر خلف Nginx.
+* Containerization باستخدام Docker.
 
 ---
 
@@ -528,7 +468,7 @@ Chats
 
 **Moh-Almousa**
 
-Software Engineering Graduate
+Software Engineering Student
 Backend Developer
 
 ### التخصص
@@ -544,7 +484,6 @@ JWT Authentication
 WebSockets
 Celery & Redis
 Docker & Docker Compose
-Nginx
 Git & GitHub
 Backend Architecture
 ```
@@ -555,4 +494,4 @@ Backend Architecture
 
 **CoachLink — Fitness Coaching Platform**
 
-مشروع Backend تم تطويره باستخدام Django وDjango REST Framework لتطبيق مفاهيم Backend Development وبناء نظام متكامل يتضمن Authentication وAuthorization وإدارة البيانات والتكامل مع الخدمات الخارجية والمدفوعات والاتصال الفوري، مع تشغيله بالكامل عبر Docker وتجهيزه للنشر.
+مشروع Backend تم تطويره باستخدام Django وDjango REST Framework لتطبيق مفاهيم Backend Development وبناء نظام متكامل يتضمن Authentication وAuthorization وإدارة البيانات والتكامل مع الخدمات الخارجية والمدفوعات والاتصال الفوري، مع تشغيله بالكامل عبر Docker.
